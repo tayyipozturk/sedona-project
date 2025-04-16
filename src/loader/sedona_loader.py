@@ -38,7 +38,6 @@ def create_linestring_rdd(df, geometry_column="geometry") -> LineStringRDD:
 def load_nodes_as_point_rdd(spark, path):
     df = load_csv_as_dataframe(spark, path)
     df = add_geometry_column(df, "geometry")
-    df.printSchema()
     return create_point_rdd(df)
 
 

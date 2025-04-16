@@ -2,8 +2,8 @@
 from sedona.register import SedonaRegistrator
 from pyspark.sql import SparkSession
 
-def create_spark_session():
-    spark = (
+def create_sedona_session():
+    sedona = (
         SparkSession.builder
         .appName("Sedona OSM Analysis")
         .config("spark.jars.packages",
@@ -14,5 +14,5 @@ def create_spark_session():
         .getOrCreate()
     )
 
-    SedonaRegistrator.registerAll(spark)
-    return spark
+    SedonaRegistrator.registerAll(sedona)
+    return sedona
