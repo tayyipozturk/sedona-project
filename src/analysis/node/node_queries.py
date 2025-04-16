@@ -1,0 +1,113 @@
+
+from pyspark.sql.functions import col, expr
+from sedona.register import SedonaRegistrator
+
+
+def find_nearest_node(nodes_df, spark, latitude, longitude):
+    SedonaRegistrator.registerAll(spark)
+
+    df = nodes_df.withColumn("geometry", expr("trim(geometry)")) \
+                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
+                 .filter("geom IS NOT NULL")
+
+    df.createOrReplaceTempView("nodes")
+
+    result = spark.sql(f"""
+        SELECT *,
+               ST_Distance(geom, ST_Point({longitude}, {latitude})) AS distance
+        FROM nodes
+        ORDER BY distance ASC
+        LIMIT 1
+    """)
+
+    return result
+
+
+def detect_major_intersections(nodes_df, spark, min_degree=4):
+    SedonaRegistrator.registerAll(spark)
+
+    df = nodes_df.withColumn("street_count", col("street_count").cast("int")) \
+                 .withColumn("geometry", expr("trim(geometry)")) \
+                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
+                 .filter("geom IS NOT NULL")
+
+    df.createOrReplaceTempView("nodes")
+
+    result = spark.sql(f"""
+        SELECT *
+        FROM nodes
+        WHERE street_count >= {min_degree}
+    """)
+
+    return result
+
+
+def compute_intersection_density(nodes_df, spark, cell_size=0.01):
+    SedonaRegistrator.registerAll(spark)
+
+    df = nodes_df.withColumn("x", col("x").cast("double")) \
+                 .withColumn("y", col("y").cast("double")) \
+                 .withColumn("geometry", expr("trim(geometry)")) \
+                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
+                 .filter("geom IS NOT NULL")
+
+    df.createOrReplaceTempView("nodes")
+
+    result = spark.sql(f"""
+        SELECT
+            CAST(x / {cell_size} AS INT) AS cell_x,
+            CAST(y / {cell_size} AS INT) AS cell_y,
+            COUNT(*) AS intersection_count
+        FROM nodes
+        GROUP BY cell_x, cell_y
+        ORDER BY intersection_count DESC
+    """)
+
+    return result
+
+
+def estimate_urban_radius(nodes_df, spark):
+    SedonaRegistrator.registerAll(spark)
+
+    df = nodes_df.withColumn("x", col("x").cast("double")) \
+                 .withColumn("y", col("y").cast("double")) \
+                 .withColumn("street_count", col("street_count").cast("double")) \
+                 .withColumn("geometry", expr("trim(geometry)")) \
+                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
+                 .filter("geom IS NOT NULL AND street_count IS NOT NULL")
+
+    df.createOrReplaceTempView("nodes")
+
+    centroid = spark.sql("SELECT SUM(x * street_count)/SUM(street_count) AS cx, SUM(y * street_count)/SUM(street_count) AS cy FROM nodes").first()
+    cx, cy = centroid["cx"], centroid["cy"]
+
+    result = spark.sql(f"""
+        SELECT MAX(ST_Distance(geom, ST_Point({cx}, {cy}))) AS urban_radius,
+               COUNT(*) AS total_nodes
+        FROM nodes
+    """)
+
+    return result
+
+
+def intersection_distribution_by_radius(nodes_df, spark, center_x, center_y, bin_size=0.01):
+    SedonaRegistrator.registerAll(spark)
+
+    df = nodes_df.withColumn("x", col("x").cast("double")) \
+                 .withColumn("y", col("y").cast("double")) \
+                 .withColumn("geometry", expr("trim(geometry)")) \
+                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
+                 .filter("geom IS NOT NULL")
+
+    df.createOrReplaceTempView("nodes")
+
+    result = spark.sql(f"""
+        SELECT
+            FLOOR(ST_Distance(geom, ST_Point({center_x}, {center_y})) / {bin_size}) AS radius_bin,
+            COUNT(*) AS node_count
+        FROM nodes
+        GROUP BY radius_bin
+        ORDER BY radius_bin
+    """)
+
+    return result

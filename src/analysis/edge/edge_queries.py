@@ -1,25 +1,5 @@
-
 from pyspark.sql.functions import col, expr
 from sedona.register import SedonaRegistrator
-
-def find_nearest_node(nodes_df, spark, latitude, longitude):
-    SedonaRegistrator.registerAll(spark)
-
-    df = nodes_df.withColumn("geometry", expr("trim(geometry)")) \
-                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
-                 .filter("geom IS NOT NULL")
-
-    df.createOrReplaceTempView("nodes")
-
-    result = spark.sql(f"""
-        SELECT *,
-               ST_Distance(geom, ST_Point({longitude}, {latitude})) AS distance
-        FROM nodes
-        ORDER BY distance ASC
-        LIMIT 1
-    """)
-
-    return result
 
 
 def summarize_roads_by_type(edges_df, spark):
@@ -112,25 +92,6 @@ def find_short_segments(edges_df, spark, length_threshold=5.0):
     return result
 
 
-def detect_major_intersections(nodes_df, spark, min_degree=4):
-    SedonaRegistrator.registerAll(spark)
-
-    df = nodes_df.withColumn("street_count", col("street_count").cast("int")) \
-                 .withColumn("geometry", expr("trim(geometry)")) \
-                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
-                 .filter("geom IS NOT NULL")
-
-    df.createOrReplaceTempView("nodes")
-
-    result = spark.sql(f"""
-        SELECT *
-        FROM nodes
-        WHERE street_count >= {min_degree}
-    """)
-
-    return result
-
-
 def summarize_road_types(edges_df, spark):
     SedonaRegistrator.registerAll(spark)
 
@@ -149,6 +110,83 @@ def summarize_road_types(edges_df, spark):
         WHERE length IS NOT NULL
         GROUP BY highway
         ORDER BY num_segments DESC
+    """)
+
+    return result
+
+
+def estimate_connected_components(edges_df, spark, buffer_distance=0.0005):
+    SedonaRegistrator.registerAll(spark)
+
+    df = edges_df.withColumn("geometry", expr("trim(geometry)")) \
+                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
+                 .withColumn("buffered", expr(f"ST_Buffer(geom, {buffer_distance})")) \
+                 .filter("geom IS NOT NULL")
+
+    df.createOrReplaceTempView("edges")
+
+    result = spark.sql("""
+        SELECT COUNT(*) AS total_edges,
+               COUNT(DISTINCT ST_GeometryType(buffered)) AS type_count
+        FROM edges
+    """)
+
+    return result
+
+
+def compute_road_intersections(edges_df, spark):
+    SedonaRegistrator.registerAll(spark)
+
+    df = edges_df.withColumn("geometry", expr("trim(geometry)")) \
+                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
+                 .filter("geom IS NOT NULL")
+    df.createOrReplaceTempView("edges")
+
+    result = spark.sql("""
+        SELECT a.geometry AS road_a, b.geometry AS road_b
+        FROM edges a, edges b
+        WHERE ST_Intersects(a.geom, b.geom) AND a.geometry != b.geometry
+    """)
+
+    return result
+
+
+def summarize_bridges_tunnels(edges_df, spark):
+    SedonaRegistrator.registerAll(spark)
+
+    df = edges_df.withColumn("geometry", expr("trim(geometry)")) \
+                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
+                 .filter("geom IS NOT NULL")
+
+    df.createOrReplaceTempView("edges")
+
+    result = spark.sql("""
+        SELECT bridge, tunnel, COUNT(*) AS count
+        FROM edges
+        WHERE bridge IS NOT NULL OR tunnel IS NOT NULL
+        GROUP BY bridge, tunnel
+    """)
+
+    return result
+
+
+def top_longest_named_roads(edges_df, spark, top_n=10):
+    SedonaRegistrator.registerAll(spark)
+
+    df = edges_df.withColumn("length", col("length").cast("double")) \
+                 .withColumn("geometry", expr("trim(geometry)")) \
+                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
+                 .filter("geom IS NOT NULL")
+
+    df.createOrReplaceTempView("edges")
+
+    result = spark.sql(f"""
+        SELECT name, SUM(length) AS total_length, COUNT(*) AS segments
+        FROM edges
+        WHERE name IS NOT NULL
+        GROUP BY name
+        ORDER BY total_length DESC
+        LIMIT {top_n}
     """)
 
     return result

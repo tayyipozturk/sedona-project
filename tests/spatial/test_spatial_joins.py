@@ -1,17 +1,10 @@
+from analysis.spatial.spatial_joins import indexed_point_in_polygon, indexed_polygon_polygon_overlap, line_intersects_polygon_join, linestring_touches_polygon, point_crosses_linestring, point_distance_join, point_in_polygon_join, polygon_overlaps_join, range_query_polygon
 from sedona.utils.adapter import Adapter
 from pyspark.sql.functions import expr
 from shapely.geometry import Point, box
 from sedona.core.geom.envelope import Envelope
-from sedona.core.enums import IndexType, GridType
-from analysis.spatial_joins import (indexed_point_in_polygon, 
-                                    indexed_polygon_polygon_overlap, 
-                                    line_intersects_polygon_join, 
-                                    linestring_touches_polygon, 
-                                    point_crosses_linestring, 
-                                    point_distance_join, 
-                                    point_in_polygon_join, 
-                                    polygon_overlaps_join, 
-                                    range_query_polygon)
+from sedona.core.enums import IndexType
+
 
 
 def create_test_polygon_rdd(spark):

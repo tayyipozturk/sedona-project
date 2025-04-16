@@ -1,8 +1,9 @@
+from analysis.spatial.spatial_ops import spatial_join_points_with_polygon
 from sedona.utils.adapter import Adapter
 from sedona.register import SedonaRegistrator
 from pyspark.sql.functions import expr
-from src.loader.sedona_loader import load_nodes_as_point_rdd, load_csv_as_dataframe, add_geometry_column
-from src.analysis.spatial_ops import spatial_join_points_with_polygon
+from src.loader.sedona_loader import load_csv_as_dataframe, add_geometry_column
+
 
 
 def test_spatial_ops(spark, points_rdd):

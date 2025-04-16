@@ -1,6 +1,8 @@
-from src.analysis.spatial_summary import summarize_spatial_rdd
-from src.analysis.connectivity import count_intersections, high_degree_nodes, calculate_edge_density
-from src.analysis.speed_profile import average_speed_by_road_type, average_travel_time, fastest_road_segments
+
+from analysis.edge.speed_profile import average_speed_by_road_type, average_travel_time, fastest_road_segments
+from analysis.spatial.connectivity import count_intersections, high_degree_nodes, calculate_edge_density
+from analysis.spatial.spatial_summary import summarize_spatial_rdd
+
 
 def test_spatial_summary(spark, nodes_rdd, edges_rdd):
     print("[SUMMARY] Nodes:", summarize_spatial_rdd(nodes_rdd, "Nodes"))
