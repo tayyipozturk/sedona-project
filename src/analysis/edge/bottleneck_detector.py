@@ -1,7 +1,6 @@
 from pyspark.sql.functions import col, expr
-from sedona.register import SedonaRegistrator
 
-def compute_bottleneck_score(edges_df, spark):
+def compute_bottleneck_score(edges_df, sedona):
     df = edges_df.withColumn("length", col("length").cast("double")) \
                  .withColumn("width", col("width").cast("double")) \
                  .withColumn("weight_time", col("weight_time").cast("double")) \
@@ -11,7 +10,7 @@ def compute_bottleneck_score(edges_df, spark):
 
     df.createOrReplaceTempView("edges")
 
-    result_df = spark.sql("""
+    result_df = sedona.sql("""
         SELECT
             geometry,
             length,

@@ -1,6 +1,6 @@
 # src/analysis/connectivity.py
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import col, countDistinct
+from pyspark.sql.functions import col
 
 
 def count_intersections(df: DataFrame, node_id_col: str = "highway") -> int:

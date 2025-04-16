@@ -1,6 +1,6 @@
 from sedona.core.SpatialRDD import PointRDD, LineStringRDD, PolygonRDD
 from sedona.core.enums import GridType, IndexType
-from sedona.core.spatialOperator import JoinQuery, KNNQuery, RangeQuery
+from sedona.core.spatialOperator import JoinQuery, RangeQuery
 from sedona.core.geom.envelope import Envelope
 from sedona.utils.adapter import Adapter
 from sedona.sql.types import GeometryType
@@ -29,24 +29,21 @@ def polygon_overlaps_join(poly_rdd1: PolygonRDD, poly_rdd2: PolygonRDD):
     return JoinQuery.SpatialJoinQuery(poly_rdd1, poly_rdd2, False, False)
 
 
-def point_distance_join(spark, points_rdd: PointRDD, polygon_rdd: PolygonRDD, distance: float):
-    # Convert PolygonRDD to DataFrame
-    polygon_df = Adapter.toDf(polygon_rdd, spark)
+def point_distance_join(sedona, points_rdd: PointRDD, polygon_rdd: PolygonRDD, distance: float):
+
+    polygon_df = Adapter.toDf(polygon_rdd, sedona)
     polygon_df.createOrReplaceTempView("polygons")
 
-    # Apply ST_Buffer to each polygon
-    buffered_df = spark.sql(f"""
+    buffered_df = sedona.sql(f"""
         SELECT ST_Buffer(geometry, {distance}) AS geometry
         FROM polygons
     """)
     buffered_df = buffered_df.withColumn("geometry", buffered_df["geometry"].cast(GeometryType()))
 
-    # Convert back to PolygonRDD
     buffered_rdd = Adapter.toSpatialRdd(buffered_df, "geometry")
     buffered_rdd.analyze()
     buffered_rdd.spatialPartitioning(points_rdd.getPartitioner())
 
-    # Partition points
     points_rdd.analyze()
     points_rdd.spatialPartitioning(buffered_rdd.getPartitioner())
 

@@ -1,7 +1,6 @@
 from pyspark.sql.functions import col, expr
 
-def compute_accessibility_score(nodes_df, spark):
-    # Cast numeric columns and create geometry
+def compute_accessibility_score(nodes_df, sedona):
     df = nodes_df.withColumn("x", col("x").cast("double")) \
            .withColumn("y", col("y").cast("double")) \
            .withColumn("street_count", col("street_count").cast("double")) \
@@ -11,12 +10,10 @@ def compute_accessibility_score(nodes_df, spark):
 
     df.createOrReplaceTempView("nodes")
 
-    # Compute centroid from x, y
-    centroid = spark.sql("SELECT AVG(x) AS cx, AVG(y) AS cy FROM nodes").first()
+    centroid = sedona.sql("SELECT AVG(x) AS cx, AVG(y) AS cy FROM nodes").first()
     cx, cy = centroid["cx"], centroid["cy"]
 
-    # Compute accessibility score using Sedona SQL
-    result_df = spark.sql(f"""
+    result_df = sedona.sql(f"""
         SELECT
             x,
             y,

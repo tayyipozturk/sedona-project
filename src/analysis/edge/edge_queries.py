@@ -1,10 +1,6 @@
 from pyspark.sql.functions import col, expr
-from sedona.register import SedonaRegistrator
 
-
-def summarize_roads_by_type(edges_df, spark):
-    SedonaRegistrator.registerAll(spark)
-
+def summarize_roads_by_type(edges_df, sedona):
     df = edges_df.withColumn("length", col("length").cast("double")) \
                  .withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
@@ -12,7 +8,7 @@ def summarize_roads_by_type(edges_df, spark):
 
     df.createOrReplaceTempView("edges")
 
-    result = spark.sql("""
+    result = sedona.sql("""
         SELECT highway,
                COUNT(*) AS num_segments,
                SUM(length) AS total_length,
@@ -27,9 +23,7 @@ def summarize_roads_by_type(edges_df, spark):
     return result
 
 
-def compute_grid_coverage(edges_df, spark, cell_size=0.01):
-    SedonaRegistrator.registerAll(spark)
-
+def compute_grid_coverage(edges_df, sedona, cell_size=0.01):
     df = edges_df.withColumn("length", col("length").cast("double")) \
                  .withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
@@ -39,7 +33,7 @@ def compute_grid_coverage(edges_df, spark, cell_size=0.01):
 
     df.createOrReplaceTempView("edges")
 
-    result = spark.sql(f"""
+    result = sedona.sql(f"""
         SELECT
             CAST(x / {cell_size} AS INT) AS cell_x,
             CAST(y / {cell_size} AS INT) AS cell_y,
@@ -54,16 +48,14 @@ def compute_grid_coverage(edges_df, spark, cell_size=0.01):
     return result
 
 
-def clip_edges_to_bbox(edges_df, spark, min_x, min_y, max_x, max_y):
-    SedonaRegistrator.registerAll(spark)
-
+def clip_edges_to_bbox(edges_df, sedona, min_x, min_y, max_x, max_y):
     df = edges_df.withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
                  .filter("geom IS NOT NULL")
 
     df.createOrReplaceTempView("edges")
 
-    result = spark.sql(f"""
+    result = sedona.sql(f"""
         SELECT *
         FROM edges
         WHERE ST_Within(geom, ST_PolygonFromEnvelope({min_x}, {min_y}, {max_x}, {max_y}))
@@ -72,9 +64,7 @@ def clip_edges_to_bbox(edges_df, spark, min_x, min_y, max_x, max_y):
     return result
 
 
-def find_short_segments(edges_df, spark, length_threshold=5.0):
-    SedonaRegistrator.registerAll(spark)
-
+def find_short_segments(edges_df, sedona, length_threshold=5.0):
     df = edges_df.withColumn("length", col("length").cast("double")) \
                  .withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
@@ -82,7 +72,7 @@ def find_short_segments(edges_df, spark, length_threshold=5.0):
 
     df.createOrReplaceTempView("edges")
 
-    result = spark.sql(f"""
+    result = sedona.sql(f"""
         SELECT *
         FROM edges
         WHERE length IS NOT NULL AND length < {length_threshold}
@@ -92,9 +82,7 @@ def find_short_segments(edges_df, spark, length_threshold=5.0):
     return result
 
 
-def summarize_road_types(edges_df, spark):
-    SedonaRegistrator.registerAll(spark)
-
+def summarize_road_types(edges_df, sedona):
     df = edges_df.withColumn("length", col("length").cast("double")) \
                  .withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
@@ -102,7 +90,7 @@ def summarize_road_types(edges_df, spark):
 
     df.createOrReplaceTempView("edges")
 
-    result = spark.sql("""
+    result = sedona.sql("""
         SELECT highway,
                COUNT(*) AS num_segments,
                SUM(length) AS total_length
@@ -115,9 +103,7 @@ def summarize_road_types(edges_df, spark):
     return result
 
 
-def estimate_connected_components(edges_df, spark, buffer_distance=0.0005):
-    SedonaRegistrator.registerAll(spark)
-
+def estimate_connected_components(edges_df, sedona, buffer_distance=0.0005):
     df = edges_df.withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
                  .withColumn("buffered", expr(f"ST_Buffer(geom, {buffer_distance})")) \
@@ -125,7 +111,7 @@ def estimate_connected_components(edges_df, spark, buffer_distance=0.0005):
 
     df.createOrReplaceTempView("edges")
 
-    result = spark.sql("""
+    result = sedona.sql("""
         SELECT COUNT(*) AS total_edges,
                COUNT(DISTINCT ST_GeometryType(buffered)) AS type_count
         FROM edges
@@ -134,15 +120,13 @@ def estimate_connected_components(edges_df, spark, buffer_distance=0.0005):
     return result
 
 
-def compute_road_intersections(edges_df, spark):
-    SedonaRegistrator.registerAll(spark)
-
+def compute_road_intersections(edges_df, sedona):
     df = edges_df.withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
                  .filter("geom IS NOT NULL")
     df.createOrReplaceTempView("edges")
 
-    result = spark.sql("""
+    result = sedona.sql("""
         SELECT a.geometry AS road_a, b.geometry AS road_b
         FROM edges a, edges b
         WHERE ST_Intersects(a.geom, b.geom) AND a.geometry != b.geometry
@@ -151,16 +135,14 @@ def compute_road_intersections(edges_df, spark):
     return result
 
 
-def summarize_bridges_tunnels(edges_df, spark):
-    SedonaRegistrator.registerAll(spark)
-
+def summarize_bridges_tunnels(edges_df, sedona):
     df = edges_df.withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
                  .filter("geom IS NOT NULL")
 
     df.createOrReplaceTempView("edges")
 
-    result = spark.sql("""
+    result = sedona.sql("""
         SELECT bridge, tunnel, COUNT(*) AS count
         FROM edges
         WHERE bridge IS NOT NULL OR tunnel IS NOT NULL
@@ -170,9 +152,7 @@ def summarize_bridges_tunnels(edges_df, spark):
     return result
 
 
-def top_longest_named_roads(edges_df, spark, top_n=10):
-    SedonaRegistrator.registerAll(spark)
-
+def top_longest_named_roads(edges_df, sedona, top_n=10):
     df = edges_df.withColumn("length", col("length").cast("double")) \
                  .withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
@@ -180,7 +160,7 @@ def top_longest_named_roads(edges_df, spark, top_n=10):
 
     df.createOrReplaceTempView("edges")
 
-    result = spark.sql(f"""
+    result = sedona.sql(f"""
         SELECT name, SUM(length) AS total_length, COUNT(*) AS segments
         FROM edges
         WHERE name IS NOT NULL

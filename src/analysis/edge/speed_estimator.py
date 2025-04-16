@@ -1,9 +1,7 @@
 from pyspark.sql.functions import col, expr
 from sedona.register import SedonaRegistrator
 
-def compute_speed_estimation(edges_df, spark):
-    SedonaRegistrator.registerAll(spark)
-
+def compute_speed_estimation(edges_df, sedona):
     df = edges_df.withColumn("length", col("length").cast("double")) \
                  .withColumn("weight_time", col("weight_time").cast("double")) \
                  .withColumn("geometry", expr("trim(geometry)")) \
@@ -12,7 +10,7 @@ def compute_speed_estimation(edges_df, spark):
 
     df.createOrReplaceTempView("edges")
 
-    result_df = spark.sql("""
+    result_df = sedona.sql("""
         SELECT
             geometry,
             length,

@@ -1,12 +1,11 @@
 from sedona.register import SedonaRegistrator
-from sedona.sql.types import GeometryType
 from sedona.core.SpatialRDD import PointRDD, LineStringRDD
 from sedona.utils.adapter import Adapter
 from pyspark.sql.functions import col, expr, trim
 
-def load_csv_as_dataframe(spark, path: str):
-    SedonaRegistrator.registerAll(spark)
-    return spark.read.option("header", True).csv(path)
+def load_csv_as_dataframe(sedona, path: str):
+    SedonaRegistrator.registerAll(sedona)
+    return sedona.read.option("header", True).csv(path)
 
 
 def add_geometry_column(df, geometry_column_name="geometry"):
@@ -35,13 +34,13 @@ def create_linestring_rdd(df, geometry_column="geometry") -> LineStringRDD:
     return line_rdd
 
 
-def load_nodes_as_point_rdd(spark, path):
-    df = load_csv_as_dataframe(spark, path)
+def load_nodes_as_point_rdd(sedona, path):
+    df = load_csv_as_dataframe(sedona, path)
     df = add_geometry_column(df, "geometry")
     return create_point_rdd(df)
 
 
-def load_edges_as_linestring_rdd(spark, path):
-    df = load_csv_as_dataframe(spark, path)
+def load_edges_as_linestring_rdd(sedona, path):
+    df = load_csv_as_dataframe(sedona, path)
     df = add_geometry_column(df, "geometry")
     return create_linestring_rdd(df)

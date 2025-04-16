@@ -7,9 +7,9 @@ from sedona.core.enums import IndexType
 
 
 
-def create_test_polygon_rdd(spark):
+def create_test_polygon_rdd(sedona):
     polygon_wkt = "POLYGON((32.5 39.6, 32.5 40.1, 33.0 40.1, 33.0 39.6, 32.5 39.6))"
-    polygon_df = spark.createDataFrame([(polygon_wkt,)], ["geometry"])
+    polygon_df = sedona.createDataFrame([(polygon_wkt,)], ["geometry"])
     polygon_df = polygon_df.withColumn("geometry", expr("ST_GeomFromWKT(geometry)"))
     polygon_rdd = Adapter.toSpatialRdd(polygon_df, "geometry")
     polygon_rdd.analyze()
@@ -36,9 +36,9 @@ def test_polygon_polygon_overlap_join(polygon_rdd1, polygon_rdd2):
     print("[RESULT] Polygon Overlaps:", result.count())
 
 
-def test_point_distance_join(spark, points_rdd, polygon_rdd, distance):
+def test_point_distance_join(sedona, points_rdd, polygon_rdd, distance):
     print("[TEST] Point Distance Join")
-    result = point_distance_join(spark, points_rdd, polygon_rdd, distance)
+    result = point_distance_join(sedona, points_rdd, polygon_rdd, distance)
     print("[RESULT] Points within distance:", result.count())
 
 
@@ -79,9 +79,9 @@ def test_indexed_polygon_polygon_overlap(polygon_rdd1, polygon_rdd2):
 
 # Accumulated tests
 
-def test_spatial_joins1(spark, points_rdd, lines_rdd):
-    polygon_rdd1 = create_test_polygon_rdd(spark)
-    polygon_rdd2 = create_test_polygon_rdd(spark)
+def test_spatial_joins1(sedona, points_rdd, lines_rdd):
+    polygon_rdd1 = create_test_polygon_rdd(sedona)
+    polygon_rdd2 = create_test_polygon_rdd(sedona)
     
     print("Test Spatial Joins Phase 1")
     print("===================================")
@@ -89,12 +89,12 @@ def test_spatial_joins1(spark, points_rdd, lines_rdd):
     test_point_in_polygon_join(points_rdd, polygon_rdd1)
     test_line_intersects_polygon(lines_rdd, polygon_rdd1)
     test_polygon_polygon_overlap_join(polygon_rdd1, polygon_rdd2)
-    test_point_distance_join(spark, points_rdd, polygon_rdd1, 0.5)
+    test_point_distance_join(sedona, points_rdd, polygon_rdd1, 0.5)
 
 
-def test_spatial_joins2(spark, points_rdd, lines_rdd):
-    polygon_rdd1 = create_test_polygon_rdd(spark)
-    polygon_rdd2 = create_test_polygon_rdd(spark)
+def test_spatial_joins2(sedona, points_rdd, lines_rdd):
+    polygon_rdd1 = create_test_polygon_rdd(sedona)
+    polygon_rdd2 = create_test_polygon_rdd(sedona)
     
     print("Test Spatial Joins Phase 2")
     print("===================================")
@@ -109,9 +109,9 @@ def test_spatial_joins2(spark, points_rdd, lines_rdd):
     print("\n")
 
 
-def test_spatial_joins3(spark, points_rdd):
-    polygon_rdd1 = create_test_polygon_rdd(spark)
-    polygon_rdd2 = create_test_polygon_rdd(spark)
+def test_spatial_joins3(sedona, points_rdd):
+    polygon_rdd1 = create_test_polygon_rdd(sedona)
+    polygon_rdd2 = create_test_polygon_rdd(sedona)
     
     print("Test Spatial Joins Phase 3")
     print("===================================")
@@ -120,9 +120,9 @@ def test_spatial_joins3(spark, points_rdd):
     test_indexed_polygon_polygon_overlap(polygon_rdd1, polygon_rdd2)
     
     
-def add_dummy_polygons(spark, count=20):
+def add_dummy_polygons(sedona, count=20):
     dummy_polys = [(box(32 + i * 0.01, 39, 32 + i * 0.01 + 0.005, 39.005).wkt,) for i in range(count)]
-    dummy_df = spark.createDataFrame(dummy_polys, ["geometry"])
+    dummy_df = sedona.createDataFrame(dummy_polys, ["geometry"])
     dummy_df = dummy_df.withColumn("geometry", expr("ST_GeomFromWKT(geometry)"))
     dummy_rdd = Adapter.toSpatialRdd(dummy_df, "geometry")
     return dummy_rdd

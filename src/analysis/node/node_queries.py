@@ -1,18 +1,15 @@
 
 from pyspark.sql.functions import col, expr
-from sedona.register import SedonaRegistrator
 
 
-def find_nearest_node(nodes_df, spark, latitude, longitude):
-    SedonaRegistrator.registerAll(spark)
-
+def find_nearest_node(nodes_df, sedona, latitude, longitude):
     df = nodes_df.withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
                  .filter("geom IS NOT NULL")
 
     df.createOrReplaceTempView("nodes")
 
-    result = spark.sql(f"""
+    result = sedona.sql(f"""
         SELECT *,
                ST_Distance(geom, ST_Point({longitude}, {latitude})) AS distance
         FROM nodes
@@ -23,9 +20,7 @@ def find_nearest_node(nodes_df, spark, latitude, longitude):
     return result
 
 
-def detect_major_intersections(nodes_df, spark, min_degree=4):
-    SedonaRegistrator.registerAll(spark)
-
+def detect_major_intersections(nodes_df, sedona, min_degree=4):
     df = nodes_df.withColumn("street_count", col("street_count").cast("int")) \
                  .withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
@@ -33,7 +28,7 @@ def detect_major_intersections(nodes_df, spark, min_degree=4):
 
     df.createOrReplaceTempView("nodes")
 
-    result = spark.sql(f"""
+    result = sedona.sql(f"""
         SELECT *
         FROM nodes
         WHERE street_count >= {min_degree}
@@ -42,9 +37,7 @@ def detect_major_intersections(nodes_df, spark, min_degree=4):
     return result
 
 
-def compute_intersection_density(nodes_df, spark, cell_size=0.01):
-    SedonaRegistrator.registerAll(spark)
-
+def compute_intersection_density(nodes_df, sedona, cell_size=0.01):
     df = nodes_df.withColumn("x", col("x").cast("double")) \
                  .withColumn("y", col("y").cast("double")) \
                  .withColumn("geometry", expr("trim(geometry)")) \
@@ -53,7 +46,7 @@ def compute_intersection_density(nodes_df, spark, cell_size=0.01):
 
     df.createOrReplaceTempView("nodes")
 
-    result = spark.sql(f"""
+    result = sedona.sql(f"""
         SELECT
             CAST(x / {cell_size} AS INT) AS cell_x,
             CAST(y / {cell_size} AS INT) AS cell_y,
@@ -66,9 +59,7 @@ def compute_intersection_density(nodes_df, spark, cell_size=0.01):
     return result
 
 
-def estimate_urban_radius(nodes_df, spark):
-    SedonaRegistrator.registerAll(spark)
-
+def estimate_urban_radius(nodes_df, sedona):
     df = nodes_df.withColumn("x", col("x").cast("double")) \
                  .withColumn("y", col("y").cast("double")) \
                  .withColumn("street_count", col("street_count").cast("double")) \
@@ -78,10 +69,10 @@ def estimate_urban_radius(nodes_df, spark):
 
     df.createOrReplaceTempView("nodes")
 
-    centroid = spark.sql("SELECT SUM(x * street_count)/SUM(street_count) AS cx, SUM(y * street_count)/SUM(street_count) AS cy FROM nodes").first()
+    centroid = sedona.sql("SELECT SUM(x * street_count)/SUM(street_count) AS cx, SUM(y * street_count)/SUM(street_count) AS cy FROM nodes").first()
     cx, cy = centroid["cx"], centroid["cy"]
 
-    result = spark.sql(f"""
+    result = sedona.sql(f"""
         SELECT MAX(ST_Distance(geom, ST_Point({cx}, {cy}))) AS urban_radius,
                COUNT(*) AS total_nodes
         FROM nodes
@@ -90,9 +81,7 @@ def estimate_urban_radius(nodes_df, spark):
     return result
 
 
-def intersection_distribution_by_radius(nodes_df, spark, center_x, center_y, bin_size=0.01):
-    SedonaRegistrator.registerAll(spark)
-
+def intersection_distribution_by_radius(nodes_df, sedona, center_x, center_y, bin_size=0.01):
     df = nodes_df.withColumn("x", col("x").cast("double")) \
                  .withColumn("y", col("y").cast("double")) \
                  .withColumn("geometry", expr("trim(geometry)")) \
@@ -101,7 +90,7 @@ def intersection_distribution_by_radius(nodes_df, spark, center_x, center_y, bin
 
     df.createOrReplaceTempView("nodes")
 
-    result = spark.sql(f"""
+    result = sedona.sql(f"""
         SELECT
             FLOOR(ST_Distance(geom, ST_Point({center_x}, {center_y})) / {bin_size}) AS radius_bin,
             COUNT(*) AS node_count

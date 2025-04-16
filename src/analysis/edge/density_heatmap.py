@@ -1,7 +1,6 @@
 from pyspark.sql.functions import col, expr
-from sedona.register import SedonaRegistrator
 
-def compute_density_heatmap(edges_df, spark, cell_size=0.01):
+def compute_density_heatmap(edges_df, sedona, cell_size=0.01):
     df = edges_df.withColumn("length", col("length").cast("double")) \
                  .withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
@@ -11,7 +10,7 @@ def compute_density_heatmap(edges_df, spark, cell_size=0.01):
 
     df.createOrReplaceTempView("edges")
 
-    result_df = spark.sql(f"""
+    result_df = sedona.sql(f"""
         SELECT
             CAST(x / {cell_size} AS INT) AS cell_x,
             CAST(y / {cell_size} AS INT) AS cell_y,
