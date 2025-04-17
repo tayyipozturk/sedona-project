@@ -1,4 +1,5 @@
 from pyspark.sql.functions import col, expr
+from src.config.filewriter import filewriter
 
 def compute_dead_end_nodes(nodes_df, sedona):
     df = nodes_df.withColumn("x", col("x").cast("double")) \
@@ -15,5 +16,6 @@ def compute_dead_end_nodes(nodes_df, sedona):
         FROM nodes
         WHERE street_count = 1
     """)
-
+    
+    filewriter(result_df, "dead_end_nodes")
     return result_df
