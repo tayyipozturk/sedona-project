@@ -1,5 +1,7 @@
 from pyspark.sql.functions import col, expr
+from config.performance_util import performance_logged
 
+@performance_logged(label="estimate_betweenness_proxy", show=False, save_path="estimate_betweenness_proxy")
 def estimate_betweenness_proxy(nodes_df, edges_df, sedona, distance=0.001):
     n = nodes_df.withColumn("x", col("x").cast("double")) \
                 .withColumn("y", col("y").cast("double")) \
@@ -23,6 +25,7 @@ def estimate_betweenness_proxy(nodes_df, edges_df, sedona, distance=0.001):
         ORDER BY intersecting_paths DESC
     """)
 
+@performance_logged(label="detect_cycles", show=False, save_path="detect_cycles")
 def detect_cycles(edges_df, sedona, tolerance=0.0005):
     df = edges_df.withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)"))
@@ -39,6 +42,7 @@ def detect_cycles(edges_df, sedona, tolerance=0.0005):
         LIMIT 100
     """)
 
+@performance_logged(label="detect_subnetworks_by_attribute", show=False, save_path="detect_subnetworks_by_attribute")
 def detect_subnetworks_by_attribute(edges_df, sedona, attribute="highway"):
     df = edges_df.withColumn(attribute, col(attribute)) \
                  .withColumn("geometry", expr("trim(geometry)")) \
@@ -54,6 +58,7 @@ def detect_subnetworks_by_attribute(edges_df, sedona, attribute="highway"):
         ORDER BY segment_count DESC
     """)
 
+@performance_logged(label="check_directional_conflicts", show=False, save_path="check_directional_conflicts")
 def check_directional_conflicts(edges_df, sedona):
     df = edges_df.withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
@@ -69,6 +74,7 @@ def check_directional_conflicts(edges_df, sedona):
           AND a.oneway != b.oneway
     """)
 
+@performance_logged(label="classify_junction_shapes", show=False, save_path="classify_junction_shapes")
 def classify_junction_shapes(nodes_df, edges_df, sedona):
     n = nodes_df.withColumn("x", col("x").cast("double")) \
                 .withColumn("y", col("y").cast("double")) \

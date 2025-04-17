@@ -1,5 +1,7 @@
 from pyspark.sql.functions import col, expr
+from config.performance_util import performance_logged
 
+@performance_logged(label="compute_density_heatmap", show=False, save_path="density_heatmap.csv")
 def compute_density_heatmap(edges_df, sedona, cell_size=0.01):
     df = edges_df.withColumn("length", col("length").cast("double")) \
                  .withColumn("geometry", expr("trim(geometry)")) \

@@ -1,5 +1,7 @@
 from pyspark.sql.functions import col, expr
+from src.config.performance_util import performance_logged
 
+@performance_logged(label="find_edges_near_nodes", show=False, save_path="find_edges_near_nodes")
 def find_edges_near_nodes(edges_df, nodes_df, sedona, distance=0.001):
     e = edges_df.withColumn("geometry", expr("trim(geometry)")) \
                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
@@ -19,7 +21,7 @@ def find_edges_near_nodes(edges_df, nodes_df, sedona, distance=0.001):
 
     return result
 
-
+@performance_logged(label="find_anchor_edges_to_nodes", show=False, save_path="find_anchor_edges_to_nodes")
 def anchor_edges_to_nodes(edges_df, nodes_df, sedona, tolerance=0.0005):
     e = edges_df.withColumn("geometry", expr("trim(geometry)")) \
                 .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
@@ -38,7 +40,7 @@ def anchor_edges_to_nodes(edges_df, nodes_df, sedona, tolerance=0.0005):
            OR ST_Distance(ST_EndPoint(e.geom), n.geom) < {tolerance}
     """)
 
-
+@performance_logged(label="estimate_node_road_centrality", show=False, save_path="estimate_node_road_centrality")
 def estimate_node_road_centrality(edges_df, nodes_df, sedona):
     e = edges_df.withColumn("length", col("length").cast("double")) \
                 .withColumn("geometry", expr("trim(geometry)")) \
@@ -64,7 +66,7 @@ def estimate_node_road_centrality(edges_df, nodes_df, sedona):
         GROUP BY n.x, n.y
     """)
 
-
+@performance_logged(label="local_average_speed_per_node", show=False, save_path="local_average_speed_per_node")
 def local_average_speed_per_node(edges_df, nodes_df, sedona):
     e = edges_df.withColumn("length", col("length").cast("double")) \
                 .withColumn("weight_time", col("weight_time").cast("double")) \
@@ -90,7 +92,7 @@ def local_average_speed_per_node(edges_df, nodes_df, sedona):
         GROUP BY n.x, n.y
     """)
 
-
+@performance_logged(label="classify_intersection_types", show=False, save_path="classify_intersection_types")
 def classify_intersection_types(nodes_df, edges_df, sedona, min_degree=3):
     n = nodes_df.withColumn("x", col("x").cast("double")) \
                 .withColumn("y", col("y").cast("double")) \
@@ -117,7 +119,7 @@ def classify_intersection_types(nodes_df, edges_df, sedona, min_degree=3):
         HAVING COUNT(e.geometry) >= {min_degree}
     """)
 
-
+@performance_logged(label="assign_traffic_proxy_to_edges", show=False, save_path="assign_traffic_proxy_to_edges")
 def assign_traffic_proxy_to_edges(edges_df, nodes_df, sedona):
     e = edges_df.withColumn("length", col("length").cast("double")) \
                 .withColumn("geometry", expr("trim(geometry)")) \
@@ -142,7 +144,7 @@ def assign_traffic_proxy_to_edges(edges_df, nodes_df, sedona):
         GROUP BY e.geometry, e.length
     """)
 
-
+@performance_logged(label="compute_road_class_accessibility", show=False, save_path="compute_road_class_accessibility")
 def compute_road_class_accessibility(nodes_df, edges_df, sedona, radius=0.001):
     n = nodes_df.withColumn("x", col("x").cast("double")) \
                 .withColumn("y", col("y").cast("double")) \
@@ -166,7 +168,7 @@ def compute_road_class_accessibility(nodes_df, edges_df, sedona, radius=0.001):
         ORDER BY n.x, n.y, nearby_roads DESC
     """)
 
-
+@performance_logged(label="estimate_node_to_node_travel", show=False, save_path="estimate_node_to_node_travel")
 def estimate_node_to_node_travel(edges_df, nodes_df, sedona, max_distance=0.002):
     n = nodes_df.withColumn("x", col("x").cast("double")) \
                 .withColumn("y", col("y").cast("double")) \
@@ -196,7 +198,7 @@ def estimate_node_to_node_travel(edges_df, nodes_df, sedona, max_distance=0.002)
         GROUP BY n1.x, n1.y, n2.x, n2.y
     """)
 
-
+@performance_logged(label="detect_entry_exit_nodes", show=False, save_path="detect_entry_exit_nodes")
 def detect_entry_exit_nodes(nodes_df, edges_df, sedona, min_x, min_y, max_x, max_y):
     n = nodes_df.withColumn("x", col("x").cast("double")) \
                 .withColumn("y", col("y").cast("double")) \

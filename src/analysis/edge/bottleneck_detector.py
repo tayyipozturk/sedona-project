@@ -1,5 +1,7 @@
 from pyspark.sql.functions import col, expr
+from config.performance_util import performance_logged
 
+@performance_logged(label="compute_bottleneck_score", show=False, save_path="bottleneck_score.csv")
 def compute_bottleneck_score(edges_df, sedona):
     df = edges_df.withColumn("length", col("length").cast("double")) \
                  .withColumn("width", col("width").cast("double")) \

@@ -1,5 +1,7 @@
 from pyspark.sql.functions import col, expr
+from config.performance_util import performance_logged
 
+@performance_logged(label="compute_intersection_score", show=False, save_path="compute_intersection_score")
 def compute_intersection_score(nodes_df, sedona):
     df = nodes_df.withColumn("x", col("x").cast("double")) \
                  .withColumn("y", col("y").cast("double")) \

@@ -1,6 +1,7 @@
 from pyspark.sql.functions import col, expr
-from sedona.register import SedonaRegistrator
+from config.performance_util import performance_logged
 
+@performance_logged(label="compute_speed_estimation", show=False, save_path="speed_estimation.csv")
 def compute_speed_estimation(edges_df, sedona):
     df = edges_df.withColumn("length", col("length").cast("double")) \
                  .withColumn("weight_time", col("weight_time").cast("double")) \

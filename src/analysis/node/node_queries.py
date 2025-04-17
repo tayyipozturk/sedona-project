@@ -1,7 +1,8 @@
 
 from pyspark.sql.functions import col, expr
+from config.performance_util import performance_logged
 
-
+@performance_logged(label="find_nearest_node", show=False, save_path="find_nearest_node")
 def find_nearest_node(nodes_df, sedona, latitude, longitude):
     df = nodes_df.withColumn("geometry", expr("trim(geometry)")) \
                  .withColumn("geom", expr("ST_GeomFromWKT(geometry)")) \
@@ -19,7 +20,7 @@ def find_nearest_node(nodes_df, sedona, latitude, longitude):
 
     return result
 
-
+@performance_logged(label="detect_major_intersections", show=False, save_path="detect_major_intersections")
 def detect_major_intersections(nodes_df, sedona, min_degree=4):
     df = nodes_df.withColumn("street_count", col("street_count").cast("int")) \
                  .withColumn("geometry", expr("trim(geometry)")) \
@@ -36,7 +37,7 @@ def detect_major_intersections(nodes_df, sedona, min_degree=4):
 
     return result
 
-
+@performance_logged(label="compute_intersection_density", show=False, save_path="intersection_density")
 def compute_intersection_density(nodes_df, sedona, cell_size=0.01):
     df = nodes_df.withColumn("x", col("x").cast("double")) \
                  .withColumn("y", col("y").cast("double")) \
@@ -58,7 +59,7 @@ def compute_intersection_density(nodes_df, sedona, cell_size=0.01):
 
     return result
 
-
+@performance_logged(label="estimate_urban_radius", show=False, save_path="estimate_urban_radius")
 def estimate_urban_radius(nodes_df, sedona):
     df = nodes_df.withColumn("x", col("x").cast("double")) \
                  .withColumn("y", col("y").cast("double")) \
@@ -80,7 +81,7 @@ def estimate_urban_radius(nodes_df, sedona):
 
     return result
 
-
+@performance_logged(label="intersection_distribution_by_radius", show=False, save_path="intersection_distribution_by_radius")
 def intersection_distribution_by_radius(nodes_df, sedona, center_x, center_y, bin_size=0.01):
     df = nodes_df.withColumn("x", col("x").cast("double")) \
                  .withColumn("y", col("y").cast("double")) \
